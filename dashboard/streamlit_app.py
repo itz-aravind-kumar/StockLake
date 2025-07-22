@@ -50,6 +50,7 @@ def load_all_stocks():
         except Exception:
             pass
     return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+#
 
 @st.cache_data
 def load_all_news():
