@@ -11,9 +11,6 @@ from io import BytesIO
 import requests
 from dotenv import load_dotenv
 
-import streamlit as st
-
-
 if "S3_BUCKET" in st.secrets:
     S3_BUCKET = st.secrets["S3_BUCKET"]
     AWS_REGION = st.secrets["AWS_REGION"]
@@ -26,12 +23,8 @@ else:
     NEWS_API_KEY = os.getenv("NEWS_API_KEY")
     ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
 
-
-
-# === Streamlit Setup ===
 st.set_page_config(page_title="📈 Stock Market Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-# === Utility Functions ===
 @st.cache_data
 def load_parquet(bucket, key):
     s3 = boto3.client("s3", region_name=AWS_REGION)
@@ -58,13 +51,20 @@ def load_all_stocks():
             pass
     return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
-def get_latest_news_key():
+@st.cache_data
+def load_all_news():
     keys = list_s3_keys("processed/news/")
-    return sorted(keys)[-1] if keys else None
+    dfs = []
+    for key in keys:
+        try:
+            df = load_parquet(S3_BUCKET, key)
+            dfs.append(df)
+        except Exception:
+            pass
+    return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
-# === Manual Trigger Buttons ===
 st.sidebar.markdown("---")
-st.sidebar.subheader("🕹️ Manual Trigger")
+st.sidebar.subheader("🔹️ Manual Trigger")
 if st.sidebar.button("📰 Fetch & Process News"):
     with st.spinner("Fetching and processing news..."):
         os.system("python data_ingestion/fetch_news.py")
@@ -77,12 +77,9 @@ if st.sidebar.button("📈 Fetch & Process Stocks"):
         os.system("python data_processing/process_stocks.py")
     st.sidebar.success("✅ Stocks Updated!")
 
-# === Load Data ===
 stock_df = load_all_stocks()
-news_key = get_latest_news_key()
-news_df = load_parquet(S3_BUCKET, news_key) if news_key else pd.DataFrame()
+news_df = load_all_news()
 
-# === Preprocess ===
 stock_df["date"] = pd.to_datetime(stock_df["date"]).dt.date
 symbols = sorted(stock_df["symbol"].dropna().unique())
 
@@ -92,30 +89,27 @@ if not stock_df.empty:
     news_df["published_date"] = news_df["published_at"].dt.date
 
     sentiment_daily = (
-        news_df.groupby("published_date")
+        news_df.groupby(["symbol", "published_date"])
         .agg(avg_sentiment=("sentiment_score", "mean"))
         .reset_index()
         .rename(columns={"published_date": "date"})
     )
 
-    merged_df = pd.merge(stock_df, sentiment_daily, on="date", how="left")
+    merged_df = pd.merge(stock_df, sentiment_daily, on=["symbol", "date"], how="left")
     merged_df["date"] = pd.to_datetime(merged_df["date"])
 
-# === Sidebar Filters ===
 st.sidebar.header("📊 Filters")
 selected_symbol = st.sidebar.selectbox("Select Stock Symbol", symbols)
 date_min = stock_df["date"].min()
 date_max = stock_df["date"].max()
 selected_range = st.sidebar.date_input("Date Range", [date_min, date_max])
 
-# === Filter Data ===
 filtered_df = merged_df[
     (merged_df["symbol"] == selected_symbol) &
     (merged_df["date"] >= pd.to_datetime(selected_range[0])) &
     (merged_df["date"] <= pd.to_datetime(selected_range[1]))
 ]
 
-# === Header ===
 st.markdown("""
     <h1 style='font-family: Inter;'>📈 Stock Market Intelligence</h1>
     <p style='color: #999;'>AI-powered insights using stock + news sentiment</p>
@@ -125,19 +119,17 @@ if filtered_df.empty:
     st.warning("No data available for selected symbol and range.")
     st.stop()
 
-# === KPI Metrics ===
 latest = filtered_df.sort_values("date").iloc[-1]
 col1, col2, col3 = st.columns(3)
 col1.metric("📅 Latest Date", latest["date"].strftime("%Y-%m-%d"))
 col2.metric("💵 Close Price", f"${latest['close']:.2f}")
-col3.metric("🧠 Sentiment", f"{latest['avg_sentiment']:.2f}" if pd.notna(latest["avg_sentiment"]) else "N/A")
+col3.metric("🧐 Sentiment", f"{latest['avg_sentiment']:.2f}" if pd.notna(latest["avg_sentiment"]) else "N/A")
 
-# === Charts ===
 st.markdown("## 📊 Charts")
 col4, col5 = st.columns(2)
 
 with col4:
-    st.subheader("💹 Candlestick Chart")
+    st.subheader("📉 Candlestick Chart")
     candle_df = filtered_df.sort_values("date")
     fig_candle = go.Figure(data=[go.Candlestick(
         x=candle_df["date"],
@@ -152,7 +144,7 @@ with col4:
     st.plotly_chart(fig_candle, use_container_width=True)
 
 with col5:
-    st.subheader("🧠 Sentiment Over Time")
+    st.subheader("🧐 Sentiment Over Time")
     fig_sent = px.line(filtered_df, x="date", y="avg_sentiment", template="plotly_dark",
                        labels={"avg_sentiment": "Sentiment Score", "date": "Date"})
     st.plotly_chart(fig_sent, use_container_width=True)
@@ -162,7 +154,6 @@ fig_vol = px.bar(filtered_df, x="date", y="volume", template="plotly_dark",
                  labels={"volume": "Volume", "date": "Date"})
 st.plotly_chart(fig_vol, use_container_width=True)
 
-# === 📰 Top News Headlines ===
 PLACEHOLDER_IMAGE = os.path.join("dashboard", "imagee.jpg")
 fallback_image = Image.open(PLACEHOLDER_IMAGE)
 
@@ -181,7 +172,9 @@ def fetch_image_safe(url):
 if not news_df.empty and "title" in news_df.columns:
     st.subheader("📰 Top News Headlines")
 
-    latest_news = news_df.dropna(subset=["title", "url", "published_at"]).sort_values("published_at", ascending=False).head(5)
+    latest_news = news_df[
+        news_df["symbol"] == selected_symbol
+    ].dropna(subset=["title", "url", "published_at"]).sort_values("published_at", ascending=False).head(5)
 
     for _, row in latest_news.iterrows():
         title = row["title"]
@@ -205,10 +198,8 @@ if not news_df.empty and "title" in news_df.columns:
                 </div>
             """, unsafe_allow_html=True)
 
-# === Raw Table ===
 st.subheader("📄 Full Merged Data")
 st.dataframe(filtered_df.drop_duplicates().sort_values("date", ascending=False), use_container_width=True)
 
-# === Footer ===
 st.markdown("---")
 st.caption("🔍 Built with ❤️ using Streamlit, AWS, NLP, and Python.")
