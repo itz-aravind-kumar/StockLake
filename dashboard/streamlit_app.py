@@ -144,9 +144,9 @@ if not stock_df.empty:
 
     latest = filtered_df.sort_values("date").iloc[-1]
     col1, col2, col3 = st.columns(3)
-    col1.metric("\ud83d\uddd5\ufe0f Latest Date", latest["date"].strftime("%Y-%m-%d"))
-    col2.metric("\ud83d\udcb5 Close Price", f"${latest['close']:.2f}")
-    col3.metric("\ud83d\ude2e Sentiment", f"{latest['avg_sentiment']:.2f}" if pd.notna(latest["avg_sentiment"]) else "N/A")
+    col1.metric("Latest Date", latest["date"].strftime("%Y-%m-%d"))
+    col2.metric("Close Price", f"${latest['close']:.2f}")
+    col3.metric("Sentiment", f"{latest['avg_sentiment']:.2f}" if pd.notna(latest["avg_sentiment"]) else "N/A")
 
     st.markdown("## Charts")
     col4, col5 = st.columns(2)
