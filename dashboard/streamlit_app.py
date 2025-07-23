@@ -222,7 +222,7 @@ if not stock_df.empty:
                     </div>
                 """, unsafe_allow_html=True)
 
-    st.subheader("\ud83d\udcc4 Full Merged Data")
+    st.subheader("Full Merged Data")
     st.dataframe(filtered_df.drop_duplicates().sort_values("date", ascending=False), use_container_width=True)
 
 st.markdown("---")
