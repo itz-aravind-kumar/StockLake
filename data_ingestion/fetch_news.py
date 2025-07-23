@@ -1,5 +1,3 @@
-# EquiLake/data_ingestion/fetch_news.py
-
 import requests
 import json
 import os
@@ -49,16 +47,19 @@ def fetch_news_for_symbol(symbol):
         article["symbol"] = symbol
     return articles
 
-# === Main ===
-if __name__ == "__main__":
-    print("📰 Fetching news per stock...")
-
+# ✅ Importable function for Streamlit and CLI
+def fetch_news():
     for symbol in STOCK_SYMBOLS:
         print(f"🔍 {symbol}")
         articles = fetch_news_for_symbol(symbol)
-        
+
         if articles:
             s3_key = f"raw/news/{symbol}_{TODAY}.json"
             upload_json_to_s3(articles, s3_key)
         else:
             print(f"⚠️ No articles found for {symbol}")
+
+# === CLI Entry Point ===
+if __name__ == "__main__":
+    print("📰 Fetching news per stock...")
+    fetch_news()
