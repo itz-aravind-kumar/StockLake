@@ -10,6 +10,10 @@ from PIL import Image
 from io import BytesIO
 import requests
 from dotenv import load_dotenv
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 
 if "S3_BUCKET" in st.secrets:
     S3_BUCKET = st.secrets["S3_BUCKET"]
@@ -50,7 +54,6 @@ def load_all_stocks():
         except Exception:
             pass
     return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
-#
 
 @st.cache_data
 def load_all_news():
@@ -67,15 +70,19 @@ def load_all_news():
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔹️ Manual Trigger")
 if st.sidebar.button("📰 Fetch & Process News"):
+    from data_ingestion.fetch_news import fetch_news
+    from data_processing import process_news
     with st.spinner("Fetching and processing news..."):
-        os.system("python data_ingestion/fetch_news.py")
-        os.system("python data_processing/process_news.py")
+        fetch_news()
+        process_news()
     st.sidebar.success("✅ News Updated!")
 
 if st.sidebar.button("📈 Fetch & Process Stocks"):
+    from data_ingestion import fetch_stocks
+    from data_processing import process_stocks
     with st.spinner("Fetching and processing stocks..."):
-        os.system("python data_ingestion/fetch_stocks.py")
-        os.system("python data_processing/process_stocks.py")
+        fetch_stocks()
+        process_stocks()
     st.sidebar.success("✅ Stocks Updated!")
 
 stock_df = load_all_stocks()
