@@ -6,7 +6,7 @@ EquiLake is a modern data lake solution that combines real-time stock prices wit
 
 ## 🌐 Live Website
 
-[https://your-website-link.com](https://your-website-link.com)
+[https://stocklake.streamlit.app](https://stocklake.streamlit.app/)
 
 ---
 
