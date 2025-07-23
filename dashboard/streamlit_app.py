@@ -10,10 +10,13 @@ from PIL import Image
 from io import BytesIO
 import requests
 from dotenv import load_dotenv
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from datetime import datetime
 
+# Load fetch + process functions
+from data_ingestion.fetch_news import fetch_news_for_symbol, upload_json_to_s3 as upload_news_to_s3
+from data_ingestion.fetch_stocks import fetch_stock_data, upload_json_to_s3 as upload_stocks_to_s3
+from data_processing.process_news import process_news
+import data_processing.process_stocks as ps
 
 if "S3_BUCKET" in st.secrets:
     S3_BUCKET = st.secrets["S3_BUCKET"]
@@ -67,22 +70,30 @@ def load_all_news():
             pass
     return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
+STOCK_SYMBOLS = ["AAPL", "TSLA", "GOOGL", "AMZN", "MSFT"]
+TODAY = datetime.today().strftime("%Y-%m-%d")
+
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔹️ Manual Trigger")
+
 if st.sidebar.button("📰 Fetch & Process News"):
-    from data_ingestion.fetch_news import fetch_news
-    from data_processing import process_news
     with st.spinner("Fetching and processing news..."):
-        fetch_news()
+        for symbol in STOCK_SYMBOLS:
+            articles = fetch_news_for_symbol(symbol)
+            if articles:
+                s3_key = f"raw/news/{symbol}_{TODAY}.json"
+                upload_news_to_s3(articles, s3_key)
         process_news()
     st.sidebar.success("✅ News Updated!")
 
 if st.sidebar.button("📈 Fetch & Process Stocks"):
-    from data_ingestion import fetch_stocks
-    from data_processing import process_stocks
     with st.spinner("Fetching and processing stocks..."):
-        fetch_stocks()
-        process_stocks()
+        for symbol in STOCK_SYMBOLS:
+            data = fetch_stock_data(symbol)
+            if data:
+                s3_key = f"raw/stocks/{symbol}_{TODAY}.json"
+                upload_stocks_to_s3(data, s3_key)
+        ps.process_stocks()
     st.sidebar.success("✅ Stocks Updated!")
 
 stock_df = load_all_stocks()
