@@ -35,7 +35,7 @@ else:
     NEWS_API_KEY = os.getenv("NEWS_API_KEY")
     ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
 
-st.set_page_config(page_title="\ud83d\udcc8 Stock Market Dashboard", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Stock Market Dashboard", layout="wide", initial_sidebar_state="expanded")
 
 @st.cache_data
 def load_parquet(bucket, key):
@@ -79,9 +79,9 @@ STOCK_SYMBOLS = ["AAPL", "TSLA", "GOOGL", "AMZN", "MSFT"]
 TODAY = datetime.today().strftime("%Y-%m-%d")
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("\ud83d\udd39\ufe0f Manual Trigger")
+st.sidebar.subheader(" Manual Trigger")
 
-if st.sidebar.button("\ud83d\udcf0 Fetch & Process News"):
+if st.sidebar.button("Fetch & Process News"):
     with st.spinner("Fetching and processing news..."):
         for symbol in STOCK_SYMBOLS:
             articles = fetch_news_for_symbol(symbol)
@@ -89,9 +89,9 @@ if st.sidebar.button("\ud83d\udcf0 Fetch & Process News"):
                 s3_key = f"raw/news/{symbol}_{TODAY}.json"
                 upload_news_to_s3(articles, s3_key)
         process_news()
-    st.sidebar.success("\u2705 News Updated!")
+    st.sidebar.success(" News Updated!")
 
-if st.sidebar.button("\ud83d\udcc8 Fetch & Process Stocks"):
+if st.sidebar.button("Fetch & Process Stocks"):
     with st.spinner("Fetching and processing stocks..."):
         for symbol in STOCK_SYMBOLS:
             data = fetch_stock_data(symbol)
@@ -99,7 +99,7 @@ if st.sidebar.button("\ud83d\udcc8 Fetch & Process Stocks"):
                 s3_key = f"raw/stocks/{symbol}_{TODAY}.json"
                 upload_stocks_to_s3(data, s3_key)
         ps.process_stocks()
-    st.sidebar.success("\u2705 Stocks Updated!")
+    st.sidebar.success(" Stocks Updated!")
 
 stock_df = load_all_stocks()
 news_df = load_all_news()
@@ -120,7 +120,7 @@ if not stock_df.empty:
     merged_df = pd.merge(stock_df, sentiment_daily, on=["symbol", "date"], how="left")
     merged_df["date"] = pd.to_datetime(merged_df["date"])
 
-    st.sidebar.header("\ud83d\udcca Filters")
+    st.sidebar.header("Filters")
     symbols = sorted(stock_df["symbol"].dropna().unique())
     selected_symbol = st.sidebar.selectbox("Select Stock Symbol", symbols)
     date_min = stock_df["date"].min()
@@ -134,7 +134,7 @@ if not stock_df.empty:
     ]
 
     st.markdown("""
-        <h1 style='font-family: Inter;'>\ud83d\udcc8 Stock Market Intelligence</h1>
+        <h1 style='font-family: Inter;'>Stock Market Intelligence</h1>
         <p style='color: #999;'>AI-powered insights using stock + news sentiment</p>
     """, unsafe_allow_html=True)
 
@@ -148,11 +148,11 @@ if not stock_df.empty:
     col2.metric("\ud83d\udcb5 Close Price", f"${latest['close']:.2f}")
     col3.metric("\ud83d\ude2e Sentiment", f"{latest['avg_sentiment']:.2f}" if pd.notna(latest["avg_sentiment"]) else "N/A")
 
-    st.markdown("## \ud83d\udcca Charts")
+    st.markdown("## Charts")
     col4, col5 = st.columns(2)
 
     with col4:
-        st.subheader("\ud83d\udcc9 Candlestick Chart")
+        st.subheader("Candlestick Chart")
         candle_df = filtered_df.sort_values("date")
         fig_candle = go.Figure(data=[go.Candlestick(
             x=candle_df["date"],
@@ -167,12 +167,12 @@ if not stock_df.empty:
         st.plotly_chart(fig_candle, use_container_width=True)
 
     with col5:
-        st.subheader("\ud83e\uddd0 Sentiment Over Time")
+        st.subheader("Sentiment Over Time")
         fig_sent = px.line(filtered_df, x="date", y="avg_sentiment", template="plotly_dark",
                            labels={"avg_sentiment": "Sentiment Score", "date": "Date"})
         st.plotly_chart(fig_sent, use_container_width=True)
 
-    st.subheader("\ud83d\udcc8 Volume Traded")
+    st.subheader("Volume Traded")
     fig_vol = px.bar(filtered_df, x="date", y="volume", template="plotly_dark",
                      labels={"volume": "Volume", "date": "Date"})
     st.plotly_chart(fig_vol, use_container_width=True)
@@ -194,7 +194,7 @@ if not stock_df.empty:
             return fallback_image
 
     if not news_df.empty and "title" in news_df.columns:
-        st.subheader("\ud83d\udcf0 Top News Headlines")
+        st.subheader("Top News Headlines")
 
         latest_news = news_df[
             news_df["symbol"] == selected_symbol
@@ -226,4 +226,4 @@ if not stock_df.empty:
     st.dataframe(filtered_df.drop_duplicates().sort_values("date", ascending=False), use_container_width=True)
 
 st.markdown("---")
-st.caption("\ud83d\udd0d Built with \u2764\ufe0f using Streamlit, AWS, NLP, and Python.")
+st.caption(" Built with <3 using Streamlit, AWS, NLP, and Python.")
