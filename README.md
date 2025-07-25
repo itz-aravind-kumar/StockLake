@@ -1,6 +1,6 @@
-# 📊 EquiLake – Stock Market Intelligence Data Lake
+# 📊 StockLake – Stock Market Intelligence Data Lake
 
-EquiLake is a modern data lake solution that combines real-time stock prices with AI-powered news sentiment analysis. Built with Python, AWS, NLP, and Streamlit — it empowers users with actionable market insights in a visual, interactive dashboard.
+StockLake is a modern data lake solution that combines real-time stock prices with AI-powered news sentiment analysis. Built with Python, AWS, NLP, and Streamlit — it empowers users with actionable market insights in a visual, interactive dashboard.
 
 ---
 
